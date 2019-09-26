@@ -4,7 +4,13 @@ import requests
 
 
 class YtsRepo:
-    LIST_MOVIES = 'https://yts.lt/api/v2/list_movies.json'
+    YTS_BASE_URL = 'https://yts.lt/api/v2/'
+    LIST_MOVIES_ENDPOINT = 'list_movies.json'
+    LIST_MOVIES_URL = f"{YTS_BASE_URL}{LIST_MOVIES_ENDPOINT}"
+
+    MOVIE_DETAILS_ENDPOINT = 'movie_details.json'
+    MOVIE_DETAILS_URL = f"{YTS_BASE_URL}{MOVIE_DETAILS_ENDPOINT}"
+
     MIN_LIMIT = 1
     MAX_LIMIT = 50
 
@@ -35,10 +41,26 @@ class YtsRepo:
             'genre': genre
         }
 
-        response = requests.get(self.LIST_MOVIES, params=params)
+        response = requests.get(self.LIST_MOVIES_URL, params=params)
 
         if response.status_code == 200:
             res = response.json()
+        else:
+            res = {
+                'status': 'error'
+            }
+
+        return res
+
+    def get_movie_details(self, movie_id: int) -> Dict[str, Any]:
+        params = {
+            'movie_id': movie_id
+        }
+
+        response = requests.get(self.MOVIE_DETAILS_URL, params=params)
+
+        if response.status_code == 200:
+            res = response.json().get('data').get('movie')
         else:
             res = {
                 'status': 'error'

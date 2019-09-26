@@ -58,6 +58,13 @@ class LocalMarkingRepo:
     def was_seen(self, mid: int) -> bool:
         q = Query()
 
-        contains = self.seen_t.contains((q.id == mid) & q.seen)
+        contains = self.seen_t.contains((q.id == mid) & q.seen.test(bool))
 
         return contains
+
+    def get_seen_movie_ids(self) -> List[int]:
+        q = Query()
+
+        movie_ids = [m.get('id') for m in self.seen_t.search(q.seen.test(bool))]
+
+        return movie_ids

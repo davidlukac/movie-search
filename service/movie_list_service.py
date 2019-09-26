@@ -1,6 +1,8 @@
 import datetime
 import time
-from typing import Dict, List
+from typing import Any, Dict, List
+
+import click
 
 from repository import AdvancedRepo
 
@@ -36,3 +38,15 @@ class MovieListService:
         print(f"Found {len(movie_lst)} movies.")
 
         return movie_lst
+
+    def get_list_for_ids(self, movie_ids: List[int]) -> List[Dict[str, Any]]:
+        movies = []
+        count = len(movie_ids)
+
+        for i, mid in enumerate(movie_ids):
+            click.echo(f"\r{i + 1}/{count} ({(i + 1) / count * 100:.2f}%)", nl=False)
+            movies.append(self.advanced_repo.yts_repo.get_movie_details(mid))
+
+        click.echo('')
+
+        return movies

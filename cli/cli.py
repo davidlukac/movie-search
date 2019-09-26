@@ -45,3 +45,19 @@ def mark_seen(ids: Tuple[int]):
     storage = LocalStoragePathFactory.get_seen_storage()
     marking_svc = MarkingService(LocalMarkingRepo(storage))
     marking_svc.mark_seen(list(ids))
+
+
+@yts.command()
+def seen_list():
+    storage = LocalStoragePathFactory.get_seen_storage()
+
+    yts_repo = YtsRepo()
+    local_marking_repo = LocalMarkingRepo(storage)
+    advanced_repo = AdvancedRepo(yts_repo, local_marking_repo)
+    svc = MovieListService(advanced_repo)
+
+    movie_ids = local_marking_repo.get_seen_movie_ids()
+    click.echo(f"Found {len(movie_ids)} seen movies. Fetching details...")
+
+    movie_lst = svc.get_list_for_ids(movie_ids)
+    click.echo('\n'.join(MovieListView.get_names_as_list(movie_lst)))
