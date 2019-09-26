@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 import requests
 
@@ -20,7 +20,9 @@ class YtsRepo:
     SORT_OPTIONS = [TITLE_SORT, YEAR_SORT, RATING_SORT, PEERS_SORT, SEEDS_SORT, DOWNLOAD_COUNT_SORT, LIKE_COUNT_SORT,
                     DATE_ADDED_SORT]
 
-    def list_movies(self, min_rating: int, sort_by: str, limit: int = 50, page: int = 1) -> Dict[str, Any]:
+    def list_movies(self, min_rating: int, genre: List[str], sort_by: str, limit: int = 50,
+                    page: int = 1) -> Dict[str, Any]:
+
         assert min_rating in range(0, 10)
         assert limit in range(self.MIN_LIMIT, self.MAX_LIMIT + 1)
         assert page > 0
@@ -29,7 +31,8 @@ class YtsRepo:
             'limit': limit,
             'minimum_rating': min_rating,
             'page': page,
-            'sort_by': sort_by
+            'sort_by': sort_by,
+            'genre': genre
         }
 
         response = requests.get(self.LIST_MOVIES, params=params)

@@ -1,36 +1,59 @@
 from typing import Any, Dict, List
 
-from repository import YtsRepo
+import click
+
+from repository.yts_repo import YtsRepo
 
 
+# noinspection PyMethodMayBeStatic
 class AdvancedRepo:
+    OR_GENRE_OPERATOR = 'OR'
+    AND_GENRE_OPERATOR = 'AND'
+    GENRE_OPERATORS = [AND_GENRE_OPERATOR, OR_GENRE_OPERATOR]
+
     def __init__(self, yts_repo: YtsRepo) -> None:
         super().__init__()
         self.yts_repo = yts_repo
 
-    def year_filter(self, movie_list: List[Dict[str, Any]], year_since: int) -> List[Dict[str, Any]]:
+    def apply_year_filter(self, movie_list: List[Dict[str, Any]], year_since: int) -> List[Dict[str, Any]]:
         return [m for m in movie_list if m.get('year') >= year_since or m.get('year') is None]
 
-    def list_movies(self, rating: int, year_since: int, sort_by: str, result_limit: int) -> List[Dict]:
-        movies = []
+    def apply_and_genre_filter(self, movie_list: List[Dict[str, Any]], genre: List[str]) -> List[Dict[str, Any]]:
+        return [m for m in movie_list if all(g in map(str.lower, m.get('genres')) for g in genre)]
+
+    def list_movies(self, rating: int, year_since: int, genre: List[str], sort_by: str, genre_operator: str,
+                    result_limit: int) -> List[Dict]:
+        final_movies = []
         total = None
         page = 1
 
         while True:
-            needed = result_limit - len(movies)
+            gathered_ct = len(final_movies)
+            needed_ct = result_limit - gathered_ct
 
-            res = self.yts_repo.list_movies(rating, sort_by, limit=YtsRepo.MAX_LIMIT, page=page)
-            i_movies = res.get('data').get('movies')
+            click.echo(f"\rFound {gathered_ct} ({gathered_ct / result_limit * 100:.2f}%) of {result_limit} movies...",
+                       nl=False)
 
-            real_returned = len(i_movies)
-            filtered_movies = self.year_filter(i_movies, year_since)
+            res = self.yts_repo.list_movies(rating, genre, sort_by, limit=YtsRepo.MAX_LIMIT, page=page)
+            movies = res.get('data').get('movies')
 
-            if real_returned < needed:
-                cut_idx = len(filtered_movies)
+            if movies is None and res.get('status') == 'ok':
+                raise Exception('Server error - no movies were returned!')
+
+            real_returned = len(movies)
+            filtered_movies = self.apply_year_filter(movies, year_since)
+
+            if genre_operator == self.AND_GENRE_OPERATOR and len(genre) > 1:
+                filtered_movies = self.apply_and_genre_filter(filtered_movies, genre)
+
+            filtered_ct = len(filtered_movies)
+
+            if filtered_ct < needed_ct:
+                cut_idx = filtered_ct
             else:
-                cut_idx = needed
+                cut_idx = needed_ct
 
-            movies = movies + filtered_movies[0:cut_idx]
+            final_movies = final_movies + filtered_movies[0:cut_idx]
 
             if total is None:
                 total = res.get('data').get('movie_count')
@@ -39,7 +62,9 @@ class AdvancedRepo:
 
             if real_returned < YtsRepo.MAX_LIMIT:
                 break
-            if len(movies) == result_limit:
+            if len(final_movies) == result_limit:
                 break
 
-        return movies
+        click.echo('')
+
+        return final_movies
