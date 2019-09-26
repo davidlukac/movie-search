@@ -3,8 +3,8 @@ from typing import Tuple
 import click
 from click import Choice
 
-from repository import AdvancedRepo, GenreRepository, YtsRepo
-from service import MovieListService
+from repository import AdvancedRepo, GenreRepository, LocalMarkingRepo, LocalStoragePathFactory, YtsRepo
+from service import MarkingService, MovieListService
 from view import MovieListView
 
 
@@ -23,7 +23,9 @@ def yts():
 @click.option('-l', '--results-limit', type=int, default=100, show_default=True)
 def movie_list(rating: int, year_since: int, genre: Tuple[str], sort_by: str, genre_operator: str, results_limit: int):
     yts_repo = YtsRepo()
-    adv_repo = AdvancedRepo(yts_repo)
+    storage = LocalStoragePathFactory.get_seen_storage()
+    local_marking_repo = LocalMarkingRepo(storage)
+    adv_repo = AdvancedRepo(yts_repo, local_marking_repo)
     svc = MovieListService(adv_repo)
 
     movie_lst = svc.list(rating, year_since, list(genre), sort_by, genre_operator, results_limit)
@@ -34,3 +36,12 @@ def movie_list(rating: int, year_since: int, genre: Tuple[str], sort_by: str, ge
 @yts.command()
 def genre_list():
     print('\n'.join('{}'.format(g) for g in GenreRepository().ALL_GENRES))
+
+
+@yts.command()
+@click.argument('ids', nargs=-1, type=int, required=True)
+def mark_seen(ids: Tuple[int]):
+    """IDS - List of space separated movie IDs to mark as seen."""
+    storage = LocalStoragePathFactory.get_seen_storage()
+    marking_svc = MarkingService(LocalMarkingRepo(storage))
+    marking_svc.mark_seen(list(ids))
