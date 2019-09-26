@@ -48,6 +48,15 @@ def mark_seen(ids: Tuple[int]):
 
 
 @yts.command()
+@click.argument('ids', nargs=-1, type=int, required=True)
+def un_mark_seen(ids: Tuple[int]):
+    """IDS - List of space separated movie IDs to un-mark as seen."""
+    storage = LocalStoragePathFactory.get_seen_storage()
+    marking_svc = MarkingService(LocalMarkingRepo(storage))
+    marking_svc.un_mark_seen(list(ids))
+
+
+@yts.command()
 def seen_list():
     storage = LocalStoragePathFactory.get_seen_storage()
 

@@ -55,6 +55,13 @@ class LocalMarkingRepo:
 
         return db_ids
 
+    def un_mark_seen(self, mid: int) -> List[int]:
+        q = Query()
+
+        db_ids = self.seen_t.remove(q.id == mid)
+
+        return db_ids
+
     def was_seen(self, mid: int) -> bool:
         q = Query()
 
