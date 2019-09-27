@@ -17,18 +17,20 @@ def yts():
 @click.option('-r', '--rating', type=int)
 @click.option('-y', '--year-since', type=int)
 @click.option('-g', '--genre', type=Choice(GenreRepository.ALL_GENRES), default=None, multiple=True)
-@click.option('--sort-by', type=Choice(YtsRepo.SORT_OPTIONS), default=YtsRepo.RATING_SORT, show_default=True)
-@click.option('--genre-operator', type=Choice(AdvancedRepo.GENRE_OPERATORS), default=AdvancedRepo.OR_GENRE_OPERATOR,
-              show_default=True)
+@click.option('--genre-not', type=Choice(GenreRepository.ALL_GENRES), default=None, multiple=True)
+@click.option('-s', '--sort-by', type=Choice(YtsRepo.SORT_OPTIONS), default=YtsRepo.RATING_SORT, show_default=True)
+@click.option('-o', '--genre-operator', type=Choice(AdvancedRepo.GENRE_OPERATORS),
+              default=AdvancedRepo.OR_GENRE_OPERATOR, show_default=True)
 @click.option('-l', '--results-limit', type=int, default=100, show_default=True)
-def movie_list(rating: int, year_since: int, genre: Tuple[str], sort_by: str, genre_operator: str, results_limit: int):
+def movie_list(rating: int, year_since: int, genre: Tuple[str], genre_not: Tuple[str], sort_by: str,
+               genre_operator: str, results_limit: int):
     yts_repo = YtsRepo()
     storage = LocalStoragePathFactory.get_seen_storage()
     local_marking_repo = LocalMarkingRepo(storage)
     adv_repo = AdvancedRepo(yts_repo, local_marking_repo)
     svc = MovieListService(adv_repo)
 
-    movie_lst = svc.list(rating, year_since, list(genre), sort_by, genre_operator, results_limit)
+    movie_lst = svc.list(rating, year_since, list(genre), list(genre_not), sort_by, genre_operator, results_limit)
 
     click.echo('\n'.join(MovieListView.get_names_as_list(movie_lst)))
 

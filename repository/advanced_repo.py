@@ -26,8 +26,11 @@ class AdvancedRepo:
     def apply_seen_filter(self, movie_list: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         return [m for m in movie_list if not self.local_marking_repo.was_seen(m.get('id'))]
 
-    def list_movies(self, rating: int, year_since: int, genre: List[str], sort_by: str, genre_operator: str,
-                    result_limit: int) -> List[Dict]:
+    def apply_genre_not_filter(self, movie_list: List[Dict[str, Any]], genre_not: List[str]) -> List[Dict[str, Any]]:
+        return [m for m in movie_list if not any(g in map(str.lower, m.get('genres')) for g in genre_not)]
+
+    def list_movies(self, rating: int, year_since: int, genre: List[str], genre_not: List[str], sort_by: str,
+                    genre_operator: str, result_limit: int) -> List[Dict]:
         final_movies = []
         total = None
         page = 1
@@ -49,6 +52,9 @@ class AdvancedRepo:
 
             filtered_movies = self.apply_year_filter(movies, year_since)
             filtered_movies = self.apply_seen_filter(filtered_movies)
+
+            if genre_not:
+                filtered_movies = self.apply_genre_not_filter(filtered_movies, genre_not)
 
             if genre_operator == self.AND_GENRE_OPERATOR and len(genre) > 1:
                 filtered_movies = self.apply_and_genre_filter(filtered_movies, genre)
