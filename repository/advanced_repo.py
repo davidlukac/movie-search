@@ -3,6 +3,7 @@ from typing import Any, Dict, List
 import click
 
 from repository.local_marking_repo import LocalMarkingRepo
+from repository.omdb_repo import OmdbRepo
 from repository.yts_repo import YtsRepo
 
 
@@ -12,10 +13,11 @@ class AdvancedRepo:
     AND_GENRE_OPERATOR = 'AND'
     GENRE_OPERATORS = [AND_GENRE_OPERATOR, OR_GENRE_OPERATOR]
 
-    def __init__(self, yts_repo: YtsRepo, local_marking_repo: LocalMarkingRepo) -> None:
+    def __init__(self, yts_repo: YtsRepo, local_marking_repo: LocalMarkingRepo, omdb_repo: OmdbRepo) -> None:
         super().__init__()
-        self.yts_repo = yts_repo
-        self.local_marking_repo = local_marking_repo
+        self._yts_repo = yts_repo
+        self._local_marking_repo = local_marking_repo
+        self._omdb_repo = omdb_repo
 
     def apply_year_filter(self, movie_list: List[Dict[str, Any]], year_since: int) -> List[Dict[str, Any]]:
         return [m for m in movie_list if m.get('year') >= year_since or m.get('year') is None]
@@ -24,10 +26,13 @@ class AdvancedRepo:
         return [m for m in movie_list if all(g in map(str.lower, m.get('genres')) for g in genre)]
 
     def apply_seen_filter(self, movie_list: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        return [m for m in movie_list if not self.local_marking_repo.was_seen(m.get('id'))]
+        return [m for m in movie_list if not self._local_marking_repo.was_seen(m.get('id'))]
 
     def apply_genre_not_filter(self, movie_list: List[Dict[str, Any]], genre_not: List[str]) -> List[Dict[str, Any]]:
         return [m for m in movie_list if not any(g in map(str.lower, m.get('genres')) for g in genre_not)]
+
+    def apply_least_ratings_filter(self):
+        raise NotImplementedError()
 
     def list_movies(self, rating: int, year_since: int, genre: List[str], genre_not: List[str], sort_by: str,
                     genre_operator: str, result_limit: int) -> List[Dict]:
@@ -42,7 +47,7 @@ class AdvancedRepo:
             click.echo(f"\rFound {gathered_ct} ({gathered_ct / result_limit * 100:.2f}%) of {result_limit} movies...",
                        nl=False)
 
-            res = self.yts_repo.list_movies(rating, genre, sort_by, limit=YtsRepo.MAX_LIMIT, page=page)
+            res = self._yts_repo.list_movies(rating, genre, sort_by, limit=YtsRepo.MAX_LIMIT, page=page)
             movies = res.get('data').get('movies')
 
             if movies is None and res.get('status') == 'ok':
@@ -66,7 +71,12 @@ class AdvancedRepo:
             else:
                 cut_idx = needed_ct
 
-            final_movies = final_movies + filtered_movies[0:cut_idx]
+            movies_to_add = filtered_movies[0:cut_idx]
+
+            for movie in movies_to_add:
+                self.enhance_movie_with_imdb_voted(movie)
+
+            final_movies = final_movies + movies_to_add
 
             if total is None:
                 total = res.get('data').get('movie_count')
@@ -81,3 +91,15 @@ class AdvancedRepo:
         click.echo('')
 
         return final_movies
+
+    def get_movie_details(self, movie_id: int) -> Dict[str, Any]:
+        movie = self._yts_repo.get_movie_details(movie_id)
+        movie = self.enhance_movie_with_imdb_voted(movie)
+
+        return movie
+
+    def enhance_movie_with_imdb_voted(self, movie: Dict[str, Any]) -> Dict[str, Any]:
+        movie['imdb_votes'] = int(self._omdb_repo.get_title_for_imdb_id(movie.get('imdb_code'))
+                                  .get('imdbVotes').replace(',', ''))
+
+        return movie

@@ -8,16 +8,27 @@ class LocalStoragePathFactory:
     DEFAULT_STORAGE_FOLDER_LOCATION = Path.home()
     DEFAULT_FOLDER_NAME = Path('.yts')
     DEFAULT_SEEN_FILE = Path('seen.json')
+    DEFAULT_CONFIG_FILE = Path('config.json')
+    DEFAULT_CACHE_FILE = Path('cache.json')
+
+    @classmethod
+    def _setup_data_folder(cls, folder_location: Path = DEFAULT_STORAGE_FOLDER_LOCATION,
+                           folder_name: Path = DEFAULT_FOLDER_NAME) -> Path:
+        target_dir = Path.joinpath(folder_location, folder_name)
+
+        if not target_dir.exists():
+            print(f"Setting up data folder {target_dir}")
+            target_dir.mkdir(exist_ok=True)
+
+        assert target_dir.exists()
+        assert target_dir.is_dir()
+
+        return target_dir
 
     @classmethod
     def get_seen_storage(cls, folder_location: Path = DEFAULT_STORAGE_FOLDER_LOCATION,
                          folder_name: Path = DEFAULT_FOLDER_NAME, file_name: Path = DEFAULT_SEEN_FILE) -> Path:
-        target_dir = Path.joinpath(folder_location, folder_name)
-        if not target_dir.exists():
-            print(f"Setting up data folder {target_dir}")
-            target_dir.mkdir(exist_ok=True)
-        assert target_dir.exists()
-        assert target_dir.is_dir()
+        target_dir = cls._setup_data_folder(folder_location, folder_name)
 
         storage = Path.joinpath(target_dir, file_name)
         storage.touch(exist_ok=True)
@@ -25,6 +36,30 @@ class LocalStoragePathFactory:
         assert storage.is_file()
 
         return storage
+
+    @classmethod
+    def get_config_storage(cls, folder_location: Path = DEFAULT_STORAGE_FOLDER_LOCATION,
+                           folder_name: Path = DEFAULT_FOLDER_NAME, file_name: Path = DEFAULT_CONFIG_FILE) -> Path:
+        target_dir = cls._setup_data_folder(folder_location, folder_name)
+
+        config = Path.joinpath(target_dir, file_name)
+        config.touch(exist_ok=True)
+        assert config.exists()
+        assert config.is_file()
+
+        return config
+
+    @classmethod
+    def get_cache_storage(cls, folder_location: Path = DEFAULT_STORAGE_FOLDER_LOCATION,
+                          folder_name: Path = DEFAULT_FOLDER_NAME, file_name: Path = DEFAULT_CACHE_FILE) -> Path:
+        target_dir = cls._setup_data_folder(folder_location, folder_name)
+
+        cache = Path.joinpath(target_dir, file_name)
+        cache.touch(exist_ok=True)
+        assert cache.exists()
+        assert cache.is_file()
+
+        return cache
 
 
 class LocalMarkingRepo:

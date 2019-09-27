@@ -51,7 +51,7 @@ class MovieListService:
 
         for i, mid in enumerate(movie_ids):
             click.echo(f"\r{i + 1}/{count} ({(i + 1) / count * 100:.2f}%)", nl=False)
-            movies.append(self.advanced_repo.yts_repo.get_movie_details(mid))
+            movies.append(self.advanced_repo.get_movie_details(mid))
 
         click.echo('')
 

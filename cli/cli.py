@@ -1,9 +1,12 @@
+import json
+from datetime import timedelta
 from typing import Tuple
 
 import click
 from click import Choice
 
 from repository import AdvancedRepo, GenreRepository, LocalMarkingRepo, LocalStoragePathFactory, YtsRepo
+from repository import CachedOmdbRepo, ConfigRepo, DefaultOmdbRepo, OmdbCache
 from service import MarkingService, MovieListService
 from view import MovieListView
 
@@ -24,10 +27,18 @@ def yts():
 @click.option('-l', '--results-limit', type=int, default=100, show_default=True)
 def movie_list(rating: int, year_since: int, genre: Tuple[str], genre_not: Tuple[str], sort_by: str,
                genre_operator: str, results_limit: int):
+    seen_store = LocalStoragePathFactory.get_seen_storage()
+    config_store = LocalStoragePathFactory.get_config_storage()
+    cache_store = LocalStoragePathFactory.get_cache_storage()
+
+    config = ConfigRepo(config_store).get_config()
+
     yts_repo = YtsRepo()
-    storage = LocalStoragePathFactory.get_seen_storage()
-    local_marking_repo = LocalMarkingRepo(storage)
-    adv_repo = AdvancedRepo(yts_repo, local_marking_repo)
+    local_marking_repo = LocalMarkingRepo(seen_store)
+    d_omdb_repo = DefaultOmdbRepo(config.omdb_api_key)
+    omdb_cache = OmdbCache(cache_store)
+    omdb_repo = CachedOmdbRepo(config.omdb_api_key, d_omdb_repo, omdb_cache)
+    adv_repo = AdvancedRepo(yts_repo, local_marking_repo, omdb_repo)
     svc = MovieListService(adv_repo)
 
     movie_lst = svc.list(rating, year_since, list(genre), list(genre_not), sort_by, genre_operator, results_limit)
@@ -60,11 +71,18 @@ def un_mark_seen(ids: Tuple[int]):
 
 @yts.command()
 def seen_list():
-    storage = LocalStoragePathFactory.get_seen_storage()
+    seen_store = LocalStoragePathFactory.get_seen_storage()
+    config_store = LocalStoragePathFactory.get_config_storage()
+    cache_store = LocalStoragePathFactory.get_cache_storage()
+
+    config = ConfigRepo(config_store).get_config()
 
     yts_repo = YtsRepo()
-    local_marking_repo = LocalMarkingRepo(storage)
-    advanced_repo = AdvancedRepo(yts_repo, local_marking_repo)
+    local_marking_repo = LocalMarkingRepo(seen_store)
+    d_omdb_repo = DefaultOmdbRepo(config.omdb_api_key)
+    omdb_cache = OmdbCache(cache_store)
+    omdb_repo = CachedOmdbRepo(config.omdb_api_key, d_omdb_repo, omdb_cache)
+    advanced_repo = AdvancedRepo(yts_repo, local_marking_repo, omdb_repo)
     svc = MovieListService(advanced_repo)
 
     movie_ids = local_marking_repo.get_seen_movie_ids()
@@ -72,3 +90,27 @@ def seen_list():
 
     movie_lst = svc.get_list_for_ids(movie_ids)
     click.echo('\n'.join(MovieListView.get_names_as_list(movie_lst)))
+
+
+@yts.group()
+def omdb():
+    pass
+
+
+@omdb.command(name='get')
+@click.argument('imdb_id', type=str)
+def omdb_get_by_id(imdb_id: str):
+    click.echo(f"Fetching data from OMDB for {imdb_id}...")
+
+    config_store = LocalStoragePathFactory.get_config_storage()
+    cache_store = LocalStoragePathFactory.get_cache_storage()
+
+    config = ConfigRepo(config_store).get_config()
+
+    omdb_repo = DefaultOmdbRepo(config.omdb_api_key)
+    omdb_cache = OmdbCache(cache_store)
+    repo = CachedOmdbRepo(config.omdb_api_key, omdb_repo, omdb_cache, timedelta(days=1))
+
+    data = repo.get_title_for_imdb_id(imdb_id)
+
+    click.echo(json.dumps(data, indent=2))
