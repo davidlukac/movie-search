@@ -17,6 +17,7 @@
 ```
 pipenv run python yts.py movie-list -r 6 -y 2000 -l 10
 pipenv run python yts.py movie-list -r 6 -y 2017 -g horror --genre-not=animation --genre-not=biography -g mystery -o AND
+pipenv run python yts.py movie-list -r 6 -y 2015 -l 20 --least-votes 250000
 pipenv run python yts.py mark-seen 3175 3489 1606 3488 3490
 pipenv run python yts.py seen-list
 pipenv run python yts.py omdb get tt8291224
@@ -32,6 +33,7 @@ pipenv run python yts.py omdb get tt8291224
 - Apply multiple genre filter with OR/AND conditions _(extra - no in API)_
 - Exclude movies with genre, also multiple _(extra - no in API)_
 - Limit number of results
+- Filter movies by minimal number of rating votes at OMDB 
 - Mark (and un-mark) movies as seen so they are excluded from the search results
 - List seen movies
 - Get movie details from OMDB database
