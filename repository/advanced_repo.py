@@ -31,11 +31,11 @@ class AdvancedRepo:
     def apply_genre_not_filter(self, movie_list: List[Dict[str, Any]], genre_not: List[str]) -> List[Dict[str, Any]]:
         return [m for m in movie_list if not any(g in map(str.lower, m.get('genres')) for g in genre_not)]
 
-    def apply_least_ratings_filter(self):
-        raise NotImplementedError()
+    def apply_least_votes_filter(self, movie_list: List[Dict[str, Any]], least_votes: int) -> List[Dict[str, Any]]:
+        return [m for m in movie_list if m.get('imdb_votes') >= least_votes]
 
-    def list_movies(self, rating: int, year_since: int, genre: List[str], genre_not: List[str], sort_by: str,
-                    genre_operator: str, result_limit: int) -> List[Dict]:
+    def list_movies(self, rating: int, year_since: int, genre: List[str], genre_not: List[str], least_votes: int,
+                    sort_by: str, genre_operator: str, result_limit: int) -> List[Dict]:
         final_movies = []
         total = None
         page = 1
@@ -64,6 +64,12 @@ class AdvancedRepo:
             if genre_operator == self.AND_GENRE_OPERATOR and len(genre) > 1:
                 filtered_movies = self.apply_and_genre_filter(filtered_movies, genre)
 
+            for movie in filtered_movies:
+                self.enhance_movie_with_imdb_voted(movie)
+
+            if least_votes and least_votes > 0:
+                filtered_movies = self.apply_least_votes_filter(filtered_movies, least_votes)
+
             filtered_ct = len(filtered_movies)
 
             if filtered_ct < needed_ct:
@@ -72,10 +78,6 @@ class AdvancedRepo:
                 cut_idx = needed_ct
 
             movies_to_add = filtered_movies[0:cut_idx]
-
-            for movie in movies_to_add:
-                self.enhance_movie_with_imdb_voted(movie)
-
             final_movies = final_movies + movies_to_add
 
             if total is None:
@@ -99,7 +101,13 @@ class AdvancedRepo:
         return movie
 
     def enhance_movie_with_imdb_voted(self, movie: Dict[str, Any]) -> Dict[str, Any]:
-        movie['imdb_votes'] = int(self._omdb_repo.get_title_for_imdb_id(movie.get('imdb_code'))
-                                  .get('imdbVotes').replace(',', ''))
+        votes_str = self._omdb_repo.get_title_for_imdb_id(movie.get('imdb_code')).get('imdbVotes', '').replace(',', '')
+
+        try:
+            votes = int(votes_str)
+        except ValueError:
+            votes = -1
+
+        movie['imdb_votes'] = votes
 
         return movie

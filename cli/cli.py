@@ -21,11 +21,12 @@ def yts():
 @click.option('-y', '--year-since', type=int)
 @click.option('-g', '--genre', type=Choice(GenreRepository.ALL_GENRES), default=None, multiple=True)
 @click.option('--genre-not', type=Choice(GenreRepository.ALL_GENRES), default=None, multiple=True)
+@click.option('--least-votes', type=int)
 @click.option('-s', '--sort-by', type=Choice(YtsRepo.SORT_OPTIONS), default=YtsRepo.RATING_SORT, show_default=True)
 @click.option('-o', '--genre-operator', type=Choice(AdvancedRepo.GENRE_OPERATORS),
               default=AdvancedRepo.OR_GENRE_OPERATOR, show_default=True)
 @click.option('-l', '--results-limit', type=int, default=100, show_default=True)
-def movie_list(rating: int, year_since: int, genre: Tuple[str], genre_not: Tuple[str], sort_by: str,
+def movie_list(rating: int, year_since: int, genre: Tuple[str], genre_not: Tuple[str], least_votes: int, sort_by: str,
                genre_operator: str, results_limit: int):
     seen_store = LocalStoragePathFactory.get_seen_storage()
     config_store = LocalStoragePathFactory.get_config_storage()
@@ -41,7 +42,8 @@ def movie_list(rating: int, year_since: int, genre: Tuple[str], genre_not: Tuple
     adv_repo = AdvancedRepo(yts_repo, local_marking_repo, omdb_repo)
     svc = MovieListService(adv_repo)
 
-    movie_lst = svc.list(rating, year_since, list(genre), list(genre_not), sort_by, genre_operator, results_limit)
+    movie_lst = svc.list(rating, year_since, list(genre), list(genre_not), least_votes, sort_by, genre_operator,
+                         results_limit)
 
     click.echo('\n'.join(MovieListView.get_names_as_list(movie_lst)))
 

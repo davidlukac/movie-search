@@ -12,7 +12,7 @@ class MovieListService:
         super().__init__()
         self.advanced_repo = advanced_repo
 
-    def list(self, rating: int, year_since: int, genre: List[str], genre_not: List[str], sort_by: str,
+    def list(self, rating: int, year_since: int, genre: List[str], genre_not: List[str], least_votes: int, sort_by: str,
              genre_operator: str, results_limit: int) -> List[Dict]:
         dt = datetime.datetime(year_since, 1, 1)
         assert dt
@@ -30,16 +30,19 @@ class MovieListService:
         else:
             year_string = 'ever'
 
+        least_votes_str = f"at least {least_votes:,}" if least_votes and least_votes > 0 else 'any number of'
+
         print((f"Searching for up to {results_limit} movies since {year_string} with rating {rating:.1f} to 10.0, "
                f"in{' ' if genre else ' any '}genre{'s' if len(genre) > 1 else ''}"
                f"{' ' if genre else ''}{''.join([' ', genre_operator.lower(), ' ']).join(genre)}, "
                f"{'and not in genre' if genre_not else ''}"
                f"{'s' if len(genre_not) > 1 else ''}{' ' if genre_not else ''}"
                f"{' and '.join(genre_not)}{', ' if genre_not else ''}"
+               f"with {least_votes_str} votes, "
                f"sorted by {sort_by}."))
 
-        movie_lst = self.advanced_repo.list_movies(rating, year_since, genre, genre_not, sort_by, genre_operator,
-                                                   results_limit)
+        movie_lst = self.advanced_repo.list_movies(rating, year_since, genre, genre_not, least_votes, sort_by,
+                                                   genre_operator, results_limit)
 
         print(f"Found {len(movie_lst)} movies.")
 
